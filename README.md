@@ -22,7 +22,6 @@ python -m pip install git+https://github.com/leonardopetrini/cnn-receptive-field
 Examples of how to use the code are reported `examples.ipynb`.
 ### Dependencies
 - `torch`
-- `itertools`
 
 For the example
 - `torchvision`

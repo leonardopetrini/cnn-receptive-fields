@@ -1,7 +1,6 @@
 '''
     Compute receptive field of neural network neurons.
 '''
-from itertools import product
 import torch
 import torch.nn as nn
 
@@ -41,8 +40,9 @@ def one_pixel_inputs(n=32):
     Returns a batch of n^2 images such that imgs[i] has the i-th pixel on (=1) and the rest is zero. 
     '''
     x = torch.zeros(n, n, n, n)
-    for i, j in product(range(n), range(n)):
-        x[i, j, i, j] += 1
+    for i in range(n):
+        for j in range(n):
+            x[i, j, i, j] += 1
     return x.reshape(-1, n, n)
 
 def receptive_field(f, n=32, ch=3):
