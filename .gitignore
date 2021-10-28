@@ -1,5 +1,7 @@
-# work-in-progress files
-patch_stability.ipynb
+# custom ignore and includes
+*.ipynb
+!examples.ipynb
+transformations
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
