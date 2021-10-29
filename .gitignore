@@ -1,7 +1,8 @@
 # custom ignore and includes
 *.ipynb
 !examples.ipynb
-transformations
+transformations/
+dataframes/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

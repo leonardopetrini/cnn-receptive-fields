@@ -38,8 +38,20 @@ def receptive_field_center(rf):
         Shape: [number_neurons, 2]
     """
     n = rf.shape[-1]
+    if len(rf.shape) >= 3:
+        rf = rf.reshape(-1, n, n)
     X = torch.meshgrid(torch.arange(n, device=rf.device), torch.arange(n, device=rf.device))
     return torch.stack([torch.nanmean((rf * X[i]).sum(dim=2) / rf.sum(dim=2), dim=1) for i in [1, 0]]).t()
+
+
+def receptive_field_size(rf):
+    """
+    :param torch.Tensor rf: receptive field for each neuron
+        Shape: [number_neurons, n, n]
+    :returns torch.Tensor: receptive fields size (as an estimate of the side if it was a square)
+        Shape: [number_neurons]
+    """
+    return rf.sum(dim=[-2, -1]).sqrt()
 
 
 def constant_weights(model):
