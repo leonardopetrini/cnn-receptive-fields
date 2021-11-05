@@ -4,17 +4,20 @@
 
 import torch
 import torch.nn as nn
+from torchvision.models.feature_extraction import create_feature_extractor
 
-def receptive_field(f, n=32, ch=3):
+def receptive_field(f, layers, n=32, ch=3):
     """
     Compute the receptive field of `f`, usually the network function up to a certain layer.
     It does so by setting all the weights to a constant, replacing max-pooling by avg-pooling and deactivating batch-norm.
 
     :param torch.nn.Module f: network layer function
+    :param list of str layers: compute the receptive field of layers in the list
     :param int n: input size is n x n x ch
     :param int ch: input channels
-    :return torch.Tensor: receptive field (as an n x n image) for each neuron in the activation map of layer f. Values of receptive_field are in [0, 1].
-        Shape: [activation_map_size, activation_map_size, n, n]
+    :return dict of torch.Tensor: dict of receptive fields (as an n x n image) for each layers in list
+                                  for each neuron in the activation map. Values of `receptive_field` are in [0, 1].
+        Values shape: [activation_map_size, activation_map_size, n, n]
 
     """
 
@@ -22,12 +25,18 @@ def receptive_field(f, n=32, ch=3):
     replace_pooling(f)
     x = one_pixel_inputs(n=n)
 
-    out = f(x[:, None].expand(-1, ch, -1, -1))[:, 0].detach()
-    m = out.shape[-1]
-    out = out.reshape(n, n, -1).permute(2, 0, 1)
-    out /= out.max()
+    features = create_feature_extractor(
+        f, return_nodes=layers)
 
-    return out.reshape(m, m, n, n)
+    out = features(x[:, None].expand(-1, ch, -1, -1))
+    for k in layers:
+        out[k] = out[k][:, 0].detach()
+        m = out[k].shape[-1]
+        out[k] = out[k].reshape(n, n, -1).permute(2, 0, 1)
+        out[k] /= out[k].max()
+        out[k] = out[k].reshape(m, m, n, n)
+
+    return out
 
 
 def receptive_field_center(rf):
@@ -73,7 +82,7 @@ def constant_weights(model):
             pass
         
         
-def replace_pooling(m, name=None):
+def replace_pooling(m):
     """
     Replace MaxPool2d by AvgPool2d in `m`.
     :param torch.nn.Module m: neural network model written in PyTorch.
@@ -81,12 +90,11 @@ def replace_pooling(m, name=None):
     for attr_str in dir(m):
         target_attr = getattr(m, attr_str)
         if target_attr == torch.nn.MaxPool2d:
-            print('Replaced MaxPool with AvgPool at layer:', name)
             setattr(m, attr_str, torch.nn.AvgPool2d)
             m.count_include_pad = True
             m.divisor_override = None
-    for n, ch in m.named_children():
-        replace_pooling(ch, n)
+    for ch in m.children():
+        replace_pooling(ch)
         
         
 def one_pixel_inputs(n=32):
