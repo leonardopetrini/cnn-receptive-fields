@@ -8,11 +8,12 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 def receptive_field(f, layers, n=32, ch=3):
     """
-    Compute the receptive field of `f`, usually the network function up to a certain layer.
+    Compute the receptive field of `layers` of `f` (network function).
+    Layers activations are extracted using torch `feature_extraction`.
     It does so by setting all the weights to a constant, replacing max-pooling by avg-pooling and deactivating batch-norm.
 
-    :param torch.nn.Module f: network layer function
-    :param list of str layers: compute the receptive field of layers in the list
+    :param torch.nn.Module f: network function
+    :param list of str layers: compute the receptive field of the layers in the list
     :param int n: input size is n x n x ch
     :param int ch: input channels
     :return dict of torch.Tensor: dict of receptive fields (as an n x n image) for each layers in list
@@ -76,9 +77,11 @@ def constant_weights(model):
         try:
             nn.init.constant_(module.weight, 0.01)
             nn.init.zeros_(module.bias)
-            nn.init.zeros_(module.running_mean)
-            nn.init.ones_(module.running_var)
-        except:
+            if isinstance(module, torch.nn.modules.BatchNorm2d):
+                module = module.eval()
+                nn.init.zeros_(module.running_mean)
+                nn.init.ones_(module.running_var)
+        except AttributeError:
             pass
         
         

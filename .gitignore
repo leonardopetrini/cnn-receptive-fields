@@ -3,6 +3,7 @@
 !examples.ipynb
 transformations/
 dataframes/
+neurons_stability.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
