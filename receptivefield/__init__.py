@@ -1,33 +1,39 @@
-'''
+"""
     Compute receptive field of neural network neurons.
-'''
+"""
 
 import torch
 import torch.nn as nn
 from torchvision.models.feature_extraction import create_feature_extractor
 
-def receptive_field(f, layers, n=32, ch=3):
+
+def receptive_field(f, layers, n=32, ch=3, trained=False):
     """
     Compute the receptive field of `layers` of `f` (network function).
     Layers activations are extracted using torch `feature_extraction`.
     It does so by setting all the weights to a constant, replacing max-pooling by avg-pooling and deactivating batch-norm.
+    If `trained = True` the nets' weights are used instead of constant ones (this is used -e.g.- to compute the
+    effective receptive field of a trained net).
 
     :param torch.nn.Module f: network function
     :param list of str layers: compute the receptive field of the layers in the list
     :param int n: input size is n x n x ch
     :param int ch: input channels
+    :param bool trained: use nets weights instead of constant ones.
     :return dict of torch.Tensor: dict of receptive fields (as an n x n image) for each layers in list
                                   for each neuron in the activation map. Values of `receptive_field` are in [0, 1].
         Values shape: [activation_map_size, activation_map_size, n, n]
 
     """
 
-    constant_weights(f)
+    if not trained:
+        constant_weights(f)
+    else:
+        f.eval()
     replace_pooling(f)
     x = one_pixel_inputs(n=n)
 
-    features = create_feature_extractor(
-        f, return_nodes=layers)
+    features = create_feature_extractor(f, return_nodes=layers)
 
     out = features(x[:, None].expand(-1, ch, -1, -1))
     for k in layers:
@@ -50,8 +56,12 @@ def receptive_field_center(rf):
     n = rf.shape[-1]
     if len(rf.shape) >= 3:
         rf = rf.reshape(-1, n, n)
-    X = torch.meshgrid(torch.arange(n, device=rf.device), torch.arange(n, device=rf.device))
-    return torch.stack([torch.nanmean((rf * X[i]).sum(dim=2) / rf.sum(dim=2), dim=1) for i in [1, 0]]).t()
+    X = torch.meshgrid(
+        torch.arange(n, device=rf.device), torch.arange(n, device=rf.device)
+    )
+    return torch.stack(
+        [torch.nanmean((rf * X[i]).sum(dim=2) / rf.sum(dim=2), dim=1) for i in [1, 0]]
+    ).t()
 
 
 def receptive_field_size(rf):
@@ -83,8 +93,8 @@ def constant_weights(model):
                 nn.init.ones_(module.running_var)
         except AttributeError:
             pass
-        
-        
+
+
 def replace_pooling(m):
     """
     Replace MaxPool2d by AvgPool2d in `m`.
@@ -98,8 +108,8 @@ def replace_pooling(m):
             m.divisor_override = None
     for ch in m.children():
         replace_pooling(ch)
-        
-        
+
+
 def one_pixel_inputs(n=32):
     """
     :param int n: input image side size (image is n x n)
